@@ -1,6 +1,23 @@
 # Yubkey macOS Setup
 
-The first *problem* I encountered was putting the Yubikey in the wrong way -- it needs to be facing a certain way in order to be identified by the laptop.
+*You bought a YubiKey - now what?*
+
+The goal is to outline the steps to configure your YubiKey in a sane method
+and to use it to maximize your security.
+
+This guide is for users who are comfortable with the command line and various
+technical jargon.
+
+This is highly opinionated on how you should and should not use your YubiKey
+but is organized well enough that you should be able to modify if you have a
+need.
+
+The instructions have been tested on macOS 10.14.5 (Mojave) with a
+YubiKey Neo. While there are sections that are OS independent, most of the
+tricky bits are macOS specific.
+
+To perform these instructions, the YubiKey should be plugged into your
+computer's USB port.
 
 * [Login 2FA with Yubikey](#2FA)
 * [Github Commit Signing](#git)
