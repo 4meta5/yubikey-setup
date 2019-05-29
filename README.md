@@ -87,23 +87,246 @@ auth required /usr/local/lib/security/pam_yubico.so mode=challenge-response
 *Read this official guide for trouble shooting and more information: [macOS Logon Tool Configuration Guide](https://support.yubico.com/support/solutions/articles/15000015045-macos-logon-tool-configuration-guide)*
 
 ## Signing Git Commits <a name = "git"></a>
+*this section heavily references [this page](https://developers.yubico.com/PGP/)*
 
-1. Download and install [the GPG command line tools](https://help.github.com/en/articles/generating-a-new-gpg-key) for your OS.
+1. Install [GnuPG](https://www.gnupg.org/) version 2.022 or later; there are a few other privacy tool installations of gpg documented [here](https://help.github.com/en/articles/generating-a-new-gpg-key), but use with Yubikey requires GnuPG specifically.
 
-*I keep getting stuck with generating encryption keys for this; will give it another go again soon...in the mean time, here are a few links that might help someone else figure it out before me...*
+2. Check that the version of the Yubikey's OpenGPG module is 1.05 or later. To check this, run the following command in the Termina after inserting your Yubikey:
+```bash
+$ gpg-connect-agent --hex "scd apdu 00 f1 00 00" /bye
+D[0000]  01 00 05 90 00     
+OK
+```
 
-To generate and import keys (make sure both keys are 2048 bit keys):
-* [Importing Keys](https://developers.yubico.com/PGP/Importing_keys.html)
-* [Generating Keys](https://help.github.com/en/articles/generating-a-new-gpg-key)
+If you have an existing key you want to import, the key must be a RSA 2048 bit key. You'll also need the admin PIN for the Yubikey.
 
-*Some blog post that makes it seem easy...*
-* [Yubikey Signed Commits](https://www.engineerbetter.com/blog/yubikey-signed-commits/)
+> **NOTE**: the default PIN set is `123456` and the default admin PIN is `12345678` -- follow [directions here](https://developers.yubico.com/PGP/Card_edit.html) to change it.
 
-*Read this official guide for [git commit signing with Yubikey](https://developers.yubico.com/PGP/Git_signing.html)*
+3. Genersate a RSA 2048 bit key. Paste the following in the terminal after following step (1) above
+```bash
+$ gpg --full-generate-key
+
+gpg (GnuPG) 2.0.22; Copyright (C) 2013 Free Software Foundation, Inc.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Please select what kind of key you want:
+   (1) RSA and RSA (default)
+   (2) DSA and Elgamal
+   (3) DSA (sign only)
+   (4) RSA (sign only)
+Your selection?
+```
+Select option `(1)` and choose the default of 2048 bits.
+
+```bash
+RSA keys may be between 1024 and 4096 bits long.
+What keysize do you want? (2048)
+
+Requested keysize is 2048 bits
+Please specify how long the key should be valid.
+         0 = key does not expire
+      <n>  = key expires in n days
+      <n>w = key expires in n weeks
+      <n>m = key expires in n months
+      <n>y = key expires in n years
+Key is valid for? (0)
+```
+Select an expiry date if you desire -- answer the next few questions truthfully.
+
+```bash
+Real name:
+```
+The actual name associated with this key.
+```bash
+Email address:
+```
+The email address associated with the key. You can leave the `Comment` empty or add a comment if you want. Select `O` for okay when prompted.
+
+```bash
+We need to generate a lot of random bytes. It is a good idea to perform
+some other action (type on the keyboard, move the mouse, utilize the
+disks) during the prime generation; this gives the random number
+generator a better chance to gain enough entropy.
+We need to generate a lot of random bytes. It is a good idea to perform
+some other action (type on the keyboard, move the mouse, utilize the
+disks) during the prime generation; this gives the random number
+generator a better chance to gain enough entropy.
+gpg: key 13AFCE85 marked as ultimately trusted
+public and secret key created and signed.
+
+gpg: checking the trustdb
+gpg: 3 marginal(s) needed, 1 complete(s) needed, PGP trust model
+gpg: depth: 0  valid:   4  signed:   8  trust: 0-, 0q, 0n, 0m, 0f, 4u
+gpg: depth: 1  valid:   8  signed:   2  trust: 3-, 0q, 0n, 5m, 0f, 0u
+gpg: next trustdb check due at 2014-03-23
+pub   2048R/13AFCE85 2014-03-07 [expires: 2014-06-15]
+      Key fingerprint = 743A 2D58 688A 9E9E B4FC  493F 70D1 D7A8 13AF CE85
+uid                  Foo Bar <foo@example.com>
+sub   2048R/D7421CDF 2014-03-07 [expires: 2014-06-15]
+```
+Take note of the key's id -- `13AFCE85`
+
+4. Add an authentication key. Enter the following command in the terminal:
+```bash
+$ gpg --expert --edit-key 13AFCE85
+
+gpg (GnuPG) 2.0.22; Copyright (C) 2013 Free Software Foundation, Inc.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Secret key is available.
+
+pub  2048R/13AFCE85  created: 2014-03-07  expires: 2014-06-15  usage: SC
+                     trust: ultimate      validity: ultimate
+sub  2048R/D7421CDF  created: 2014-03-07  expires: 2014-06-15  usage: E
+[ultimate] (1). Foo Bar <foo@example.com>
+
+gpg> addkey
+
+2048-bit RSA key, ID 13AFCE85, created 2014-03-07
+
+Please select what kind of key you want:
+   (3) DSA (sign only)
+   (4) RSA (sign only)
+   (5) Elgamal (encrypt only)
+   (6) RSA (encrypt only)
+   (7) DSA (set your own capabilities)
+   (8) RSA (set your own capabilities)
+Your selection?
+```
+Select `8` to get another RSA key attached to the key generated in step (3).
+
+```bash
+Possible actions for a RSA key: Sign Encrypt Authenticate
+Current allowed actions: Sign Encrypt
+
+   (S) Toggle the sign capability
+   (E) Toggle the encrypt capability
+   (A) Toggle the authenticate capability
+   (Q) Finished
+
+Your selection?
+```
+Select `A`, then `S`, then `E` to get a pure authentication key. Then enter `Q` to continue.
+```bash
+What keysize do you want? (2048)
+```
+Choose the 2048 bit key size again. Then choose the same expiry as the generated key and answer `y` if everything is correct.
+```bash
+Is this correct? (y/N) y
+Really create? (y/N) y
+We need to generate a lot of random bytes. It is a good idea to perform
+some other action (type on the keyboard, move the mouse, utilize the
+disks) during the prime generation; this gives the random number
+generator a better chance to gain enough entropy.
+
+pub  2048R/13AFCE85  created: 2014-03-07  expires: 2014-06-15  usage: SC
+                     trust: ultimate      validity: ultimate
+sub  2048R/D7421CDF  created: 2014-03-07  expires: 2014-06-15  usage: E
+sub  2048R/B4000C55  created: 2014-03-07  expires: 2014-06-15  usage: A
+[ultimate] (1). Foo Bar <foo@example.com>
+
+gpg> Save changes? (y/N) y
+```
+
+5. (OPTIONAL) You can create a backup of the key and store it in a secure place
+```bash
+$ gpg --export-secret-key --armor 13AFCE85
+```
+
+6. Import the key into the Yubikey.
+```bash
+$ gpg --edit-key 13AFCE85
+
+gpg (GnuPG) 2.0.22; Copyright (C) 2013 Free Software Foundation, Inc.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Secret key is available.
+
+pub  2048R/13AFCE85  created: 2014-03-07  expires: 2014-06-15  usage: SC
+                     trust: ultimate      validity: ultimate
+sub  2048R/D7421CDF  created: 2014-03-07  expires: 2014-06-15  usage: E
+sub  2048R/B4000C55  created: 2014-03-07  expires: 2014-06-15  usage: A
+[ultimate] (1). Foo Bar <foo@example.com>
+
+gpg> toggle
+
+sec  2048R/13AFCE85  created: 2014-03-07  expires: 2014-06-15
+ssb  2048R/D7421CDF  created: 2014-03-07  expires: never
+ssb  2048R/B4000C55  created: 2014-03-07  expires: never
+(1)  Foo Bar <foo@example.com>
+
+gpg> keytocard
+Really move the primary key? (y/N) y
+Signature key ....: [none]
+Encryption key....: [none]
+Authentication key: [none]
+
+Please select where to store the key:
+   (1) Signature key
+   (3) Authentication key
+Your selection? 1
+```
+Here we've moved the primary key to the PGP Signature slot of the Yubikey. Next move the Encryption key:
+```bash
+gpg> key 1
+
+sec  2048R/13AFCE85  created: 2014-03-07  expires: 2014-06-15
+                     card-no: 0000 00000001
+ssb* 2048R/D7421CDF  created: 2014-03-07  expires: never
+ssb  2048R/B4000C55  created: 2014-03-07  expires: never
+(1)  Foo Bar <foo@example.com>
+
+gpg> keytocard
+Signature key ....: 743A 2D58 688A 9E9E B4FC  493F 70D1 D7A8 13AF CE85
+Encryption key....: [none]
+Authentication key: [none]
+
+Please select where to store the key:
+   (2) Encryption key
+Your selection? 2
+```
+Next, move the authentication key to the Yubikey:
+```bash
+gpg> key 1
+
+sec  2048R/13AFCE85  created: 2014-03-07  expires: 2014-06-15
+                     card-no: 0000 00000001
+ssb  2048R/D7421CDF  created: 2014-03-07  expires: never
+                     card-no: 0000 00000001
+ssb  2048R/B4000C55  created: 2014-03-07  expires: never
+(1)  Foo Bar <foo@example.com>
+
+gpg> key 2
+
+sec  2048R/13AFCE85  created: 2014-03-07  expires: 2014-06-15
+                     card-no: 0000 00000001
+ssb  2048R/D7421CDF  created: 2014-03-07  expires: never
+                     card-no: 0000 00000001
+ssb* 2048R/B4000C55  created: 2014-03-07  expires: never
+(1)  Foo Bar <foo@example.com>
+
+gpg> keytocard
+Signature key ....: 743A 2D58 688A 9E9E B4FC  493F 70D1 D7A8 13AF CE85
+Encryption key....: 8D17 89A0 5C2F B804 22E5  5C04 8A68 9CC0 D742 1CDF
+Authentication key: [none]
+
+Please select where to store the key:
+   (3) Authentication key
+Your selection? 3
+```
+
+After saving the keyring, your computer no longer contains the real secret key -- only a pointer indicating it's stored on the Yubikey smart card.
+
+*If you have any trouble, refer to this [this official guide](https://developers.yubico.com/PGP/Importing_keys.html) for generating and importing the 2048 bit RSA key into the Yubikey*
+
+> *Read this official guide for [git commit signing with Yubikey](https://developers.yubico.com/PGP/Git_signing.html)*
 
 # Credits
 
-Thanks to the following people for instructions:
+Thanks to the following for instructions:
 
-- Yubico's own documentation (referenced inline in the instructions where used)
+- Yubico's own documentation (referenced where used)
 - The [original version of this doc](https://github.com/liyanchang/yubikey-setup) by [David Chiang](https://github.com/liyanchang)
