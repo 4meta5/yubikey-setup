@@ -91,7 +91,7 @@ auth required /usr/local/lib/security/pam_yubico.so mode=challenge-response
 
 1. Install [GnuPG](https://www.gnupg.org/) version 2.022 or later; there are a few other privacy tool installations of gpg documented [here](https://help.github.com/en/articles/generating-a-new-gpg-key), but use with Yubikey requires GnuPG specifically.
 
-2. Check that the version of the Yubikey's OpenGPG module is 1.05 or later. To check this, run the following command in the Termina after inserting your Yubikey:
+2. Check that the version of the Yubikey's OpenGPG module is 1.05 or later. To check this, run the following command in the Terminal after inserting your Yubikey:
 ```bash
 $ gpg-connect-agent --hex "scd apdu 00 f1 00 00" /bye
 D[0000]  01 00 05 90 00     
@@ -322,7 +322,14 @@ After saving the keyring, your computer no longer contains the real secret key -
 
 *If you have any trouble, refer to this [this official guide](https://developers.yubico.com/PGP/Importing_keys.html) for generating and importing the 2048 bit RSA key into the Yubikey*
 
-> *Read this official guide for [git commit signing with Yubikey](https://developers.yubico.com/PGP/Git_signing.html)*
+7. Set the global signing key for git such that AABBCCDD is the GPG key ID (in our example, `13AFCE85`)
+```bash
+$ git config --global user.signingkey AABBCCDD
+```
+
+*Read more in the official Yubico guide for [git commit signing with Yubikey](https://developers.yubico.com/PGP/Git_signing.html)*
+
+8. Add the GPG key ID to your github account by following the github guides [here](https://help.github.com/en/articles/generating-a-new-gpg-key) and, then, [here](https://help.github.com/en/articles/adding-a-new-gpg-key-to-your-github-account)
 
 # Credits
 
